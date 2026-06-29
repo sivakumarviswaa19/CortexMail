@@ -1,0 +1,22 @@
+# FastAPI
+fastapi
+uvicorn[standard]
+
+# LangChain + OpenAI
+langchain-openai
+
+# LangGraph
+langgraph
+
+# Google APIs
+google-auth-oauthlib
+google-api-python-client
+
+# Telegram
+requests
+
+# Scheduling
+apscheduler
+
+# Env
+python-dotenv
