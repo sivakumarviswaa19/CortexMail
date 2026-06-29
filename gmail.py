@@ -15,12 +15,7 @@ def authenticate():
             "token.json", scopes=SCOPES
         )
     else:
-        flow=InstalledAppFlow.from_client_secrets_file(
-            client_secrets_file="credentials.json", scopes=SCOPES
-        )
-        creds = flow.run_local_server(port=0)
-        with open("token.json", "w") as token:
-            token.write(creds.to_json())
+        raise Exception("token.json not found")
 
     service=build(serviceName="gmail", version="v1", credentials=creds)
 
