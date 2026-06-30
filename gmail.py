@@ -78,12 +78,11 @@ LABEL_IDS={
     WORK_EMAIL:"Label_2072885846296407054"
 }
 
-def retrieve_latest_mail(service,account_email):
+def retrieve_latest_mail(service, account_email):
     results = service.users().messages().list(
         userId="me",
         maxResults=5,
-        labelIds=["INBOX"],
-        q="-label:cortexmail-processed"  # exclude already-processed emails
+        labelIds=["INBOX"]
     ).execute()
 
     messages = results.get("messages", [])
@@ -92,9 +91,14 @@ def retrieve_latest_mail(service,account_email):
 
     latest_mail = messages[0]["id"]
 
+    with lock:
+        if latest_mail in processed_emails:
+            return None
+        processed_emails.add(latest_mail)
+
     email = service.users().messages().get(userId="me", id=latest_mail).execute()
 
-
+    # Apply label as an audit trail / for visibility in Gmail, not for dedup logic
     service.users().messages().modify(
         userId="me",
         id=latest_mail,
