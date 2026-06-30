@@ -36,7 +36,14 @@ def decision_node(State):
     receiver_name=email['receiver_name']
     receiver_email=email['receiver_email']
 
-    State["decision"]=decision_agent(body,sender,subject, receiver_name,receiver_email)
+    decision=decision_agent(body,sender,subject, receiver_name,receiver_email)
+    decision["classification"] = (
+        decision["classification"]
+        .strip()
+        .upper()
+    )
+
+    State["decision"] = decision
 
     return State
 
@@ -71,6 +78,7 @@ def telegram_node(State):
 def route_decision_node(State):
 
     classification=State["decision"]["classification"].strip().upper()
+
 
     if classification=="HIGH PRIORITY" or classification=="IMPORTANT":
         return "summariser"

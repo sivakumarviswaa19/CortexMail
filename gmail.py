@@ -103,8 +103,7 @@ def retrieve_new_emails(service, account_email):
     for record in history.get("history", []):
         for added in record.get("messagesAdded", []):
             msg_id = added["message"]["id"]
-            if "INBOX" in added["message"].get("labelIds", []):
-                new_message_ids.append(msg_id)
+            new_message_ids.append(msg_id)
 
     last_history_id[account_email] = history.get("historyId", start_history_id)
 
