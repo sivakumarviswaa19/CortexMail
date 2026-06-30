@@ -6,13 +6,13 @@ import base64
 
 processed_emails=set()
 
-def authenticate():
+def authenticate(token_path):
     """Authenticating and creating credentials for gmail"""
 
     SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
-    if os.path.exists('token.json'):
+    if os.path.exists(token_path):
         creds = Credentials.from_authorized_user_file(
-            "token.json", scopes=SCOPES
+            token_path, scopes=SCOPES
         )
     else:
         raise Exception("token.json not found")
@@ -40,21 +40,28 @@ def get_email_body(payload):
 
 
 def get_email_metadata(email):
-    """Extract sender, subject and body from email"""
+    """Extract sender, subject, body, and receiver from email"""
 
     headers = email["payload"]["headers"]
 
     subject = next((h["value"] for h in headers if h["name"] == "Subject"), "No Subject")
     sender = next((h["value"] for h in headers if h["name"] == "From"), "Unknown Sender")
+    receiver = next((h["value"] for h in headers if h["name"] == "To"), "Unknown Receiver")
     body = get_email_body(email["payload"])
 
     if not body:
         body = email.get("snippet", "Could not extract email body")
 
+    # "To" header usually looks like: "Viswaa <viswaa@ssn.edu.in>"
+    receiver_name = receiver.split("<")[0].strip() if "<" in receiver else receiver
+    receiver_email = receiver.split("<")[1].replace(">", "").strip() if "<" in receiver else receiver
+
     return {
         "subject": subject,
         "sender": sender,
-        "body": body
+        "body": body,
+        "receiver_name": receiver_name,
+        "receiver_email": receiver_email
     }
 
 
@@ -84,7 +91,8 @@ def retrieve_latest_mail(service):
         sender=info["sender"]
 
         if data is not None:
-            return {"sender": sender, "subject": subject, "body": data}
+            return {"sender": sender, "subject": subject, "body": data,
+                    "receiver_name": info["receiver_name"], "receiver_email": info["receiver_email"]}
 
 
 

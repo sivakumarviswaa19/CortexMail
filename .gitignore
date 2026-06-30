@@ -1,6 +1,8 @@
 .env
 credentials.json
-token.json
+accounts/personal/token.json
+accounts/college/token.json
+accounts/IITM/token.json
 
 __pycache__/
 *.pyc

@@ -8,6 +8,8 @@ class Email(TypedDict):
     body:str
     sender:str
     subject:str
+    receiver_name:str
+    receiver_email:str
 
 class Decision(TypedDict):
     classification:str
@@ -31,8 +33,10 @@ def decision_node(State):
     body=email['body']
     sender=email['sender']
     subject=email['subject']
+    receiver_name=email['receiver_name']
+    receiver_email=email['receiver_email']
 
-    State["decision"]=decision_agent(body,sender,subject)
+    State["decision"]=decision_agent(body,sender,subject, receiver_name,receiver_email)
 
     return State
 
@@ -41,8 +45,10 @@ def summariser_node(State):
     body = email['body']
     sender = email['sender']
     subject = email['subject']
+    receiver_name = email['receiver_name']
+    receiver_email = email['receiver_email']
 
-    State["summary"]=summariser_agent(body,sender,subject)
+    State["summary"]=summariser_agent(body,sender,subject, receiver_name,receiver_email)
     return State
 
 def formatter_node(State):

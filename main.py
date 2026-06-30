@@ -3,29 +3,44 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from agent_workflow import agent
 from gmail import authenticate,get_email_body,get_email_metadata,retrieve_latest_mail
 import time
+import json
+import base64
+import os
+from dotenv import load_dotenv
+load_dotenv()
+
+PERSONAl_EMAIL=os.getenv("PERSONAL_EMAIL")
+COLLEGE_EMAIL=os.getenv("COLLEGE_EMAIL")
+WORK_EMAIL=os.getenv("WORK_EMAIL")
 
 
 def renew_watch():
-    service.users().watch(
+    for email, service in services.items():
+        response = service.users().watch(
+            userId="me",
+            body={
+                "topicName": "projects/notification-alert-agent/topics/gmail-notifications"
+            }
+        ).execute()
+        print(f"Renewed watch for {email}")
+
+scheduler = BackgroundScheduler()
+scheduler.add_job(renew_watch, "interval", days=6)  # renew every 6 days, before 7 day expiry
+scheduler.start()
+
+services = {
+    PERSONAl_EMAIL: authenticate("accounts/personal/token.json"),
+    COLLEGE_EMAIL: authenticate("accounts/college/token.json"),
+    WORK_EMAIL: authenticate("accounts/IITM/token.json")
+}
+
+for email, service in services.items():
+    response = service.users().watch(
         userId="me",
         body={
             "topicName": "projects/notification-alert-agent/topics/gmail-notifications"
         }
     ).execute()
-    print("Gmail watch renewed")
-
-scheduler = BackgroundScheduler()
-scheduler.add_job(renew_watch, "interval", days=6)  # renew every 6 days, before 7 day expiry
-scheduler.start()
-service=authenticate()
-
-trigger=service.users().watch(
-    userId="me",
-    body={
-        "topicName":
-        "projects/notification-alert-agent/topics/gmail-notifications"
-    }
-).execute()
 
 app = FastAPI()
 
@@ -34,15 +49,27 @@ def home():
     return {"message":"Welcome to CortexMail!"}
 
 @app.post("/gmail")
-def gmail(request:Request):
+async def gmail(request:Request):
+
+    body = await request.json()
+    pubsub_data = body["message"]["data"]
+    decoded = json.loads(
+        base64.b64decode(pubsub_data).decode("utf-8")
+    )
+
+    email_address = decoded["emailAddress"]
+    service = services[email_address]
 
     email_json = retrieve_latest_mail(service)
+
     if email_json is not None:
         result=agent.invoke({
             "email":{
                 "body":email_json["body"],
                 "subject":email_json["subject"],
-                "sender":email_json["sender"]
+                "sender":email_json["sender"],
+                "receiver_name":email_json["receiver_name"],
+                "receiver_email":email_json["receiver_email"]
             }
         })
         return {"response":"sent!"}
