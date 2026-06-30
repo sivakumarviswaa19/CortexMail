@@ -12,7 +12,7 @@ processed_emails=set()
 def authenticate(token_path):
     """Authenticating and creating credentials for gmail"""
 
-    SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
+    SCOPES = ["https://www.googleapis.com/auth/gmail.modify"]
     if os.path.exists(token_path):
         creds = Credentials.from_authorized_user_file(
             token_path, scopes=SCOPES
