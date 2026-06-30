@@ -2,8 +2,14 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from google.oauth2.credentials import Credentials
 import os
+from dotenv import load_dotenv
+load_dotenv()
 import base64
 import threading
+
+PERSONAl_EMAIL = os.getenv("PERSONAL_EMAIL")
+COLLEGE_EMAIL = os.getenv("COLLEGE_EMAIL")
+WORK_EMAIL = os.getenv("WORK_EMAIL")
 
 lock=threading.Lock()
 
@@ -66,10 +72,13 @@ def get_email_metadata(email):
         "receiver_name": receiver_name,
         "receiver_email": receiver_email
     }
+LABEL_IDS={
+    PERSONAl_EMAIL:"Label_2184135964621054581",
+    COLLEGE_EMAIL:"Label_8336136197680826322",
+    WORK_EMAIL:"Label_2072885846296407054"
+}
 
-
-
-def retrieve_latest_mail(service):
+def retrieve_latest_mail(service,account_email):
     results = service.users().messages().list(
         userId="me",
         maxResults=5,
@@ -85,11 +94,11 @@ def retrieve_latest_mail(service):
 
     email = service.users().messages().get(userId="me", id=latest_mail).execute()
 
-    # Mark as processed immediately via label, so Gmail itself tracks it
+
     service.users().messages().modify(
         userId="me",
         id=latest_mail,
-        body={"addLabelIds": ["Label_CortexMail_Processed"]}
+        body={"addLabelIds": [LABEL_IDS[account_email]]}
     ).execute()
 
     data = get_email_body(email["payload"])

@@ -48,10 +48,10 @@ app = FastAPI()
 def home():
     return {"message":"Welcome to CortexMail!"}
 
-def process_email(service):
+def process_email(service,account_email):
     """Runs the heavy work (Gmail fetch, LLM calls, Telegram send) after responding to Pub/Sub"""
 
-    email_json = retrieve_latest_mail(service)
+    email_json = retrieve_latest_mail(service,account_email)
 
     if email_json is not None:
         agent.invoke({
@@ -76,7 +76,7 @@ async def gmail(request:Request,background_tasks: BackgroundTasks):
     email_address = decoded["emailAddress"]
     service = services[email_address]
 
-    background_tasks.add_task(process_email, service)
+    background_tasks.add_task(process_email, service,email_address)
 
     return {"response":"Message sent!"}
 
