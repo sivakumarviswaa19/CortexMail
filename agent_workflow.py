@@ -70,7 +70,7 @@ def telegram_node(State):
 
 def route_decision_node(State):
 
-    classification=State["decision"]["classification"]
+    classification=State["decision"]["classification"].strip().upper()
 
     if classification=="HIGH PRIORITY" or classification=="IMPORTANT":
         return "summariser"
