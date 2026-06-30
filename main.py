@@ -29,9 +29,9 @@ scheduler.add_job(renew_watch, "interval", days=6)  # renew every 6 days, before
 scheduler.start()
 
 services = {
-    PERSONAl_EMAIL: authenticate("accounts/personal/token.json"),
-    COLLEGE_EMAIL: authenticate("accounts/college/token.json"),
-    WORK_EMAIL: authenticate("accounts/IITM/token.json")
+    PERSONAl_EMAIL: authenticate("/etc/secrets/personal_token.json"),
+    COLLEGE_EMAIL: authenticate("/etc/secrets/college_token.json"),
+    WORK_EMAIL: authenticate("/etc/secrets/iitm_token.json")
 }
 
 for email, service in services.items():
