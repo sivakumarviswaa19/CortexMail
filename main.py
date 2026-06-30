@@ -53,14 +53,14 @@ def process_email(service,account_email):
 
     email_json = retrieve_new_emails(service,account_email)
 
-    if email_json is not None:
+    for email_jsons in email_json:
         agent.invoke({
             "email": {
-                "body": email_json["body"],
-                "subject": email_json["subject"],
-                "sender": email_json["sender"],
-                "receiver_name": email_json["receiver_name"],
-                "receiver_email": email_json["receiver_email"]
+                "body": email_jsons["body"],
+                "subject": email_jsons["subject"],
+                "sender": email_jsons["sender"],
+                "receiver_name": email_jsons["receiver_name"],
+                "receiver_email": email_jsons["receiver_email"]
             }
         })
 
