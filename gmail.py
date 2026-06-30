@@ -5,15 +5,17 @@ import os
 from dotenv import load_dotenv
 load_dotenv()
 import base64
-import threading
+import redis
 
 PERSONAl_EMAIL = os.getenv("PERSONAL_EMAIL")
 COLLEGE_EMAIL = os.getenv("COLLEGE_EMAIL")
 WORK_EMAIL = os.getenv("WORK_EMAIL")
 
-lock=threading.Lock()
+# Shared, persistent store -> survives restarts and works across multiple workers
+r = redis.Redis.from_url(os.getenv("REDIS_URL"), decode_responses=True)
 
-processed_emails=set()
+PROCESSED_TTL_SECONDS = 60 * 60 * 24 * 7  # keep msg_id dedup keys for 7 days
+
 
 def authenticate(token_path):
     """Authenticating and creating credentials for gmail"""
@@ -72,20 +74,41 @@ def get_email_metadata(email):
         "receiver_name": receiver_name,
         "receiver_email": receiver_email
     }
+
+
 LABEL_IDS={
     PERSONAl_EMAIL:"Label_2184135964621054581",
     COLLEGE_EMAIL:"Label_8336136197680826322",
     WORK_EMAIL:"Label_2072885846296407054"
 }
 
-last_history_id = {}
+
+def _history_key(account_email):
+    return f"history_id:{account_email}"
+
+
+def _get_last_history_id(account_email):
+    return r.get(_history_key(account_email))
+
+
+def _set_last_history_id(account_email, history_id):
+    r.set(_history_key(account_email), history_id)
+
+
+def _already_processed(msg_id):
+    """Atomic check-and-set. Returns True if msg_id was already processed
+    (by this or any other worker), False if this call just claimed it."""
+    # SET NX -> only succeeds if key didn't already exist
+    claimed = r.set(f"processed:{msg_id}", "1", nx=True, ex=PROCESSED_TTL_SECONDS)
+    return not claimed
+
 
 def retrieve_new_emails(service, account_email):
-    start_history_id = last_history_id.get(account_email)
+    start_history_id = _get_last_history_id(account_email)
 
     if start_history_id is None:
         profile = service.users().getProfile(userId="me").execute()
-        last_history_id[account_email] = profile["historyId"]
+        _set_last_history_id(account_email, profile["historyId"])
         return []
 
     try:
@@ -96,23 +119,21 @@ def retrieve_new_emails(service, account_email):
         ).execute()
     except Exception:
         profile = service.users().getProfile(userId="me").execute()
-        last_history_id[account_email] = profile["historyId"]
+        _set_last_history_id(account_email, profile["historyId"])
         return []
 
-    new_message_ids = []
+    new_message_ids = set()
     for record in history.get("history", []):
         for added in record.get("messagesAdded", []):
             msg_id = added["message"]["id"]
-            new_message_ids.append(msg_id)
+            new_message_ids.add(msg_id)
 
-    last_history_id[account_email] = history.get("historyId", start_history_id)
+    _set_last_history_id(account_email, history.get("historyId", start_history_id))
 
     results = []
     for msg_id in new_message_ids:
-        with lock:
-            if msg_id in processed_emails:
-                continue
-            processed_emails.add(msg_id)
+        if _already_processed(msg_id):
+            continue
 
         email = service.users().messages().get(userId="me", id=msg_id).execute()
 
