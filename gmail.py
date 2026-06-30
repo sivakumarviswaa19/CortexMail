@@ -10,6 +10,7 @@ import redis
 PERSONAl_EMAIL = os.getenv("PERSONAL_EMAIL")
 COLLEGE_EMAIL = os.getenv("COLLEGE_EMAIL")
 WORK_EMAIL = os.getenv("WORK_EMAIL")
+REDIS_URL=os.getenv("REDIS_URL")
 
 # Shared, persistent store -> survives restarts and works across multiple workers
 r = redis.Redis.from_url(os.getenv("REDIS_URL"), decode_responses=True)

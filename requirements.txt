@@ -20,3 +20,5 @@ apscheduler
 
 # Env
 python-dotenv
+
+redis
