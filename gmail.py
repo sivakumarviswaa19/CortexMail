@@ -70,37 +70,31 @@ def get_email_metadata(email):
 
 
 def retrieve_latest_mail(service):
-    """Retrieve and read the latest mail by decoding data"""
-
-    results=service.users().messages().list(
+    results = service.users().messages().list(
         userId="me",
-        maxResults=5
+        maxResults=5,
+        labelIds=["INBOX"],
+        q="-label:cortexmail-processed"  # exclude already-processed emails
     ).execute()
 
-    latest_mail=results["messages"][0]["id"]  #messages[0] denotes latest mail
+    messages = results.get("messages", [])
+    if not messages:
+        return None
 
-    with lock:
-        if latest_mail in processed_emails:
-            return None
-        processed_emails.add(latest_mail)
+    latest_mail = messages[0]["id"]
 
+    email = service.users().messages().get(userId="me", id=latest_mail).execute()
 
-    email=service.users().messages().get(
+    # Mark as processed immediately via label, so Gmail itself tracks it
+    service.users().messages().modify(
         userId="me",
-        id=latest_mail
+        id=latest_mail,
+        body={"addLabelIds": ["Label_CortexMail_Processed"]}
     ).execute()
 
-
-
-    data=get_email_body(email["payload"])
-    info=get_email_metadata(email)
-    subject=info["subject"]
-    sender=info["sender"]
+    data = get_email_body(email["payload"])
+    info = get_email_metadata(email)
 
     if data is not None:
-        return {"sender": sender, "subject": subject, "body": data,
+        return {"sender": info["sender"], "subject": info["subject"], "body": data,
                 "receiver_name": info["receiver_name"], "receiver_email": info["receiver_email"]}
-
-
-
-
