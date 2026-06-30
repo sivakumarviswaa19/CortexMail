@@ -1,4 +1,4 @@
-from fastapi import FastAPI,Request
+from fastapi import FastAPI,Request,BackgroundTasks
 from apscheduler.schedulers.background import BackgroundScheduler
 from agent_workflow import agent
 from gmail import authenticate,get_email_body,get_email_metadata,retrieve_latest_mail
@@ -48,8 +48,24 @@ app = FastAPI()
 def home():
     return {"message":"Welcome to CortexMail!"}
 
+def process_email(service):
+    """Runs the heavy work (Gmail fetch, LLM calls, Telegram send) after responding to Pub/Sub"""
+
+    email_json = retrieve_latest_mail(service)
+
+    if email_json is not None:
+        agent.invoke({
+            "email": {
+                "body": email_json["body"],
+                "subject": email_json["subject"],
+                "sender": email_json["sender"],
+                "receiver_name": email_json["receiver_name"],
+                "receiver_email": email_json["receiver_email"]
+            }
+        })
+
 @app.post("/gmail")
-async def gmail(request:Request):
+async def gmail(request:Request,background_tasks: BackgroundTasks):
 
     body = await request.json()
     pubsub_data = body["message"]["data"]
@@ -60,16 +76,7 @@ async def gmail(request:Request):
     email_address = decoded["emailAddress"]
     service = services[email_address]
 
-    email_json = retrieve_latest_mail(service)
+    background_tasks.add_task(process_email, service)
 
-    if email_json is not None:
-        result=agent.invoke({
-            "email":{
-                "body":email_json["body"],
-                "subject":email_json["subject"],
-                "sender":email_json["sender"],
-                "receiver_name":email_json["receiver_name"],
-                "receiver_email":email_json["receiver_email"]
-            }
-        })
-        return {"response":"sent!"}
+    return {"response":"Message sent!"}
+

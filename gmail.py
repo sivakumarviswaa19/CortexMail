@@ -3,6 +3,9 @@ from googleapiclient.discovery import build
 from google.oauth2.credentials import Credentials
 import os
 import base64
+import threading
+
+lock=threading.Lock()
 
 processed_emails=set()
 
@@ -76,23 +79,27 @@ def retrieve_latest_mail(service):
 
     latest_mail=results["messages"][0]["id"]  #messages[0] denotes latest mail
 
-    if latest_mail not in processed_emails:
-
-        email=service.users().messages().get(
-            userId="me",
-            id=latest_mail
-        ).execute()
-
+    with lock:
+        if latest_mail in processed_emails:
+            return None
         processed_emails.add(latest_mail)
 
-        data=get_email_body(email["payload"])
-        info=get_email_metadata(email)
-        subject=info["subject"]
-        sender=info["sender"]
 
-        if data is not None:
-            return {"sender": sender, "subject": subject, "body": data,
-                    "receiver_name": info["receiver_name"], "receiver_email": info["receiver_email"]}
+    email=service.users().messages().get(
+        userId="me",
+        id=latest_mail
+    ).execute()
+
+
+
+    data=get_email_body(email["payload"])
+    info=get_email_metadata(email)
+    subject=info["subject"]
+    sender=info["sender"]
+
+    if data is not None:
+        return {"sender": sender, "subject": subject, "body": data,
+                "receiver_name": info["receiver_name"], "receiver_email": info["receiver_email"]}
 
 
 
