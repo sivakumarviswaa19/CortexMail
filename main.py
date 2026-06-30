@@ -1,7 +1,7 @@
 from fastapi import FastAPI,Request,BackgroundTasks
 from apscheduler.schedulers.background import BackgroundScheduler
 from agent_workflow import agent
-from gmail import authenticate,get_email_body,get_email_metadata,retrieve_latest_mail
+from gmail import authenticate,get_email_body,get_email_metadata,retrieve_new_emails
 import time
 import json
 import base64
@@ -51,7 +51,7 @@ def home():
 def process_email(service,account_email):
     """Runs the heavy work (Gmail fetch, LLM calls, Telegram send) after responding to Pub/Sub"""
 
-    email_json = retrieve_latest_mail(service,account_email)
+    email_json = retrieve_new_emails(service,account_email)
 
     if email_json is not None:
         agent.invoke({

@@ -78,36 +78,58 @@ LABEL_IDS={
     WORK_EMAIL:"Label_2072885846296407054"
 }
 
-def retrieve_latest_mail(service, account_email):
-    results = service.users().messages().list(
-        userId="me",
-        maxResults=5,
-        labelIds=["INBOX"]
-    ).execute()
+last_history_id = {}
 
-    messages = results.get("messages", [])
-    if not messages:
-        return None
+def retrieve_new_emails(service, account_email):
+    start_history_id = last_history_id.get(account_email)
 
-    latest_mail = messages[0]["id"]
+    if start_history_id is None:
+        profile = service.users().getProfile(userId="me").execute()
+        last_history_id[account_email] = profile["historyId"]
+        return []
 
-    with lock:
-        if latest_mail in processed_emails:
-            return None
-        processed_emails.add(latest_mail)
+    try:
+        history = service.users().history().list(
+            userId="me",
+            startHistoryId=start_history_id,
+            historyTypes=["messageAdded"]
+        ).execute()
+    except Exception:
+        profile = service.users().getProfile(userId="me").execute()
+        last_history_id[account_email] = profile["historyId"]
+        return []
 
-    email = service.users().messages().get(userId="me", id=latest_mail).execute()
+    new_message_ids = []
+    for record in history.get("history", []):
+        for added in record.get("messagesAdded", []):
+            msg_id = added["message"]["id"]
+            if "INBOX" in added["message"].get("labelIds", []):
+                new_message_ids.append(msg_id)
 
-    # Apply label as an audit trail / for visibility in Gmail, not for dedup logic
-    service.users().messages().modify(
-        userId="me",
-        id=latest_mail,
-        body={"addLabelIds": [LABEL_IDS[account_email]]}
-    ).execute()
+    last_history_id[account_email] = history.get("historyId", start_history_id)
 
-    data = get_email_body(email["payload"])
-    info = get_email_metadata(email)
+    results = []
+    for msg_id in new_message_ids:
+        with lock:
+            if msg_id in processed_emails:
+                continue
+            processed_emails.add(msg_id)
 
-    if data is not None:
-        return {"sender": info["sender"], "subject": info["subject"], "body": data,
-                "receiver_name": info["receiver_name"], "receiver_email": info["receiver_email"]}
+        email = service.users().messages().get(userId="me", id=msg_id).execute()
+
+        service.users().messages().modify(
+            userId="me",
+            id=msg_id,
+            body={"addLabelIds": [LABEL_IDS[account_email]]}
+        ).execute()
+
+        data = get_email_body(email["payload"])
+        info = get_email_metadata(email)
+
+        if data is not None:
+            results.append({
+                "sender": info["sender"], "subject": info["subject"], "body": data,
+                "receiver_name": info["receiver_name"], "receiver_email": info["receiver_email"]
+            })
+
+    return results
