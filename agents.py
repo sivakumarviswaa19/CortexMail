@@ -11,7 +11,7 @@ llm=ChatOpenAI(model="gpt-4.1-mini",api_key=key)
 def decision_agent(body,sender,subject,receiver_name,receiver_email):
     """Decides whether email is worth notifying to user"""
 
-    prompt = f"""You are an email priority classifier for Viswaa, a CS student at SSN College of Engineering (Sri Sivasubramaniya Nadar College of Engineering), Chennai.
+    prompt = f"""You are an email priority classifier for Viswaa, a CS student at SSN College of Engineering (Sri Sivasubramaniya Nadar College of Engineering), Chennai, who is also pursuing the IIT Madras BS degree program.
 
         Analyze this email and decide if it requires immediate attention.
 
@@ -31,6 +31,7 @@ def decision_agent(body,sender,subject,receiver_name,receiver_email):
         - Any event registration with a deadline
         - Scholarship or fellowship opportunities
         - Anything sent to Viswaa's college email from faculty, departments, admin, or placement cell
+        - Anything related to the IIT Madras BS degree program (IITM BS), including but not limited to: course updates, new coursework or content uploaded, assignment/quiz/exam deadlines, grading or evaluation notices, term registration, fee payment deadlines, exam hall tickets, proctoring/OPPE details, discussion forum announcements, or any official communication from IIT Madras, IITM BS portal, or instructors of that program
 
         Classify as IMPORTANT if the email is about:
         - Anything from SSN College of Engineering (clubs, general announcements) not covered above
