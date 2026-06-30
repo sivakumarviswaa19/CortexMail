@@ -129,7 +129,7 @@ def retrieve_new_emails(service, account_email):
             msg_id = added["message"]["id"]
             new_message_ids.add(msg_id)
 
-    _set_last_history_id(account_email, history.get("historyId", start_history_id))
+
 
     results = []
     for msg_id in new_message_ids:
@@ -152,5 +152,6 @@ def retrieve_new_emails(service, account_email):
                 "sender": info["sender"], "subject": info["subject"], "body": data,
                 "receiver_name": info["receiver_name"], "receiver_email": info["receiver_email"]
             })
+    _set_last_history_id(account_email, history.get("historyId", start_history_id))
 
     return results
